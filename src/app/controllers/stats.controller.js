@@ -1,16 +1,21 @@
 const { Stats } = require('../models');
+const { Search } = require('../models');
+const validateUrl = require('../shared/validateGithubUrl');
+
+const Github = require('../classes/github');
 
 class StatsController {
+
   async getStats ( req, res ) {
-    const { path } = req.body;
 
-    const fileStats = await Stats.findAll();
+    const { url } = req.body;
 
-    if ( !fileStats ) {
-      return res.status(401).json({message: 'File not found'});
+    const validation = validateUrl(url);
+
+    if ( !validation.status ) {
+      return res.status(400).json({message: validation.message});
     }
-
-    return res.status(200).send(fileStats);
+    
   }
 }
 
