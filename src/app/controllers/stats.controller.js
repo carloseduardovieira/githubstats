@@ -18,10 +18,7 @@ class StatsController {
     }
     
     try {
-
-      const jsonPath = 'temp/github.html';
-      await htmlReader.requestAndSaveHtml( url, jsonPath );
-      const matches = await htmlReader.extractFolders(jsonPath);
+      const matches = await htmlReader.readRepository(url);
       return res.json({ repository: matches });  
     } catch ( error ) {
       console.error(error);
