@@ -7,10 +7,8 @@ const htmlReader = require('../classes/htmlReader');
 class StatsController {
 
   async getStats ( req, res ) {
-
     
     const { url } = req.body;
-    
     const validation = validateUrl(url);
     
     if ( !validation.status ) {
@@ -18,12 +16,14 @@ class StatsController {
     }
     
     try {
-      const matches = await htmlReader.readRepository(url);
-      return res.json({ repository: matches });  
+      const filesArray = [validation.url];
+      const matches = await htmlReader.readRepository(filesArray);
+
+      return res.json({ repository: matches });
     } catch ( error ) {
       console.error(error);
     }
-
+    
     // return res.json({ repository: matches });
     
 
