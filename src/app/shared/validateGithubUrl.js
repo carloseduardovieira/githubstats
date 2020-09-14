@@ -3,6 +3,8 @@ const GITHUB_URL_2 = 'https://github.com/';
 
 module.exports = ValidateGithubURL = function( url ) {
 
+  if( !url ) { return false; }
+
   const patternUsernameValidation = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i;
   const patternRepositoryValidation = /^[A-Za-z0-9_.-]{0,100}$/i;
   const patternUsername = /github.com\/(.*?)\//;

@@ -2,5 +2,5 @@ node_modules
 *.log
 *.env
 *.env.test
-__testes__
+__tests__/coverage
 temp

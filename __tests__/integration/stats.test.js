@@ -4,7 +4,7 @@ const truncate = require('../utils/truncate');
 
 const { Stats } = require('../../src/app/models');
 
-describe('Register', () => {
+describe('Register Stats', () => {
 
   beforeEach( async () => {
     await truncate();
@@ -21,11 +21,24 @@ describe('Register', () => {
     expect(stats.name).toBe('file1');
   });
 
-  it('shold return file stats list', (done) => {
-    request(app).get('/stats')
-    .set('Accept','application/json')
-    .send({path: 'https://github.com/carloseduardovieira'})
-    .expect( 200, done );
+  it('should return error if there are invalid parameters', async () => {
+    const stats = await Stats.create({
+      extension: 'json',
+      lines: '1045',
+      bytes: '2020' 
+    }).catch((error) => {
+      expect(error).toBeTruthy();
+    });
   });
+
+  it('should return all file stats', async () => {
+    await request(app).get('/stats')
+    .set('Accept','application/json')
+    .send({url: 'https://github.com/carloseduardovieira/conexao-php-pdo'}).then((sucess) => {
+      return Stats.findAll();
+    }).then( stats => {
+      expect(stats.length).toBeTruthy();
+    });
+  }, 3000000);
 
 });
