@@ -1,5 +1,6 @@
 const { Stats } = require('../models');
 const { Search } = require('../models');
+
 const validateUrl = require('../shared/validateGithubUrl');
 
 const htmlReader = require('../classes/htmlReader');
@@ -14,40 +15,51 @@ class StatsController {
     if ( !validation.status ) {
       return res.status(400).json({message: validation.message});
     }
-    
+
     try {
-      const filesArray = [validation.url];
-      const matches = await htmlReader.readRepository(filesArray);
-      console.log(matches);
-      return res.json({ repository: matches });
+
+      const lastSearch = await Search.findOne({ where: { repository: url } });
+
+      if ( lastSearch ) {
+        const fileStats = await Stats.findAll({
+          attributes:['name', 'extension', 'lines', 'bytes'],
+          where: {
+            repositoryId: lastSearch.id
+          },
+          group: ['extension', 'name', 'lines', 'bytes'],
+          raw: true
+        });
+        return res.json({ stats: fileStats });
+      }
+
+      let filesStats = await htmlReader.readRepository([validation.url]);
+      filesStats = filesStats.sort( (a,b) => {
+        return a.extension === b.extension ? 0 : +(a.extension > b.extension) || -1;
+      });
+
+      const searchedRepository = await Search.create({ repository: url });
+
+      filesStats = filesStats.map( file => {
+        file.repositoryId = searchedRepository.id;
+        return file;
+      });
+      
+      await Stats.bulkCreate(filesStats).then(() => {
+        return Stats.findAll({
+          attributes:['name', 'extension', 'lines', 'bytes'],
+          where: {
+            repositoryId: searchedRepository.id
+          },
+          group: ['extension', 'name', 'lines', 'bytes'],
+          raw: true
+        });
+      }).then( stats => {
+        return res.json({ stats: stats });
+      });
+
     } catch ( error ) {
-      console.error(error);
+      return res.status(500).json({message: 'An unexpected error occurred while processing your request'});
     }
-    
-    // return res.json({ repository: matches });
-    
-
-    // const lastSearch = await Search.findOne({ where: { repository: url } });
-
-    // if ( lastSearch ) {
-    //   return;
-    // }
-
-    // try {
-    //   const path = await Search.create({ repository: url });
-    //   return res.json({ path });
-    // } catch( error ) {
-    //   console.error(error);
-    // }
-
-
-    // const fileStats = await Stats.findAll();
-
-    // if ( !fileStats ) {
-    //   return res.status(401).json({message: 'File not found'});
-    // }
-
-    // return res.json({ file: fileStats, path: Github.getRepository() });
   }
 }
 

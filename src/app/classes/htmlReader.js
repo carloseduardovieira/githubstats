@@ -7,36 +7,33 @@ class HtmlReader {
   jsonPath = 'temp/github.html';
   files = [];
 
-  async readRepository ( filesArray ) {
+  /**
+  * This method will read all folders and files from the github repository
+  * @param string[] urlArray
+  */
+  async readRepository ( urlArray ) {
+    
+    if ( !urlArray.length ) { return this.files; }
 
-    if ( !filesArray.length ) { 
-      console.log('TAMANHO FINAL', this.files.length);
-      return this.files;
-    }
-
-    const url = filesArray.pop();
+    const url = urlArray.pop();
     await this.requestAndSaveHtml( `${this.githubUrl + url }` );
     const fileInfo = await this.getFileInformation(url);
-    
-    if ( fileInfo ) {
-      console.log('FILE INFO', fileInfo);
-      console.log('FILE ARRAY', filesArray);
-      this.files.push(fileInfo);
-      console.log(this.files.length);
-      fs.unlinkSync(this.jsonPath);
-      return await this.readRepository(filesArray);
 
+    if ( fileInfo ) {
+      this.files.push(fileInfo);
+      fs.unlinkSync(this.jsonPath);
+      return await this.readRepository(urlArray);
     } else {
       const matches = await this.findFoldersAndFiles();
       if ( matches ) {
         const links = await this.extractLinks(matches);
         if ( links ) {
-          filesArray = filesArray.concat(links);
+          urlArray = urlArray.concat(links);
         }
       }
       
       fs.unlinkSync(this.jsonPath);
-      return await this.readRepository(filesArray);
+      return await this.readRepository(urlArray);
     }
   }
 
@@ -69,11 +66,17 @@ class HtmlReader {
 
         const patternLineInformation = /(\w+) lines/;
         const patternBytes = /file-info-divider\"><\/span>?.\s*([a-zA-Z0-9].[a-zA-Z0-9]*[\s]*[a-zA-Z]*)/;
+        const patternFileWithoutLines = /([\s][0-9]{1,}[\s]{1,}[A-Z]{1,})[\s]/;
         const patternFileExtension = /[^\\]*\.(\w+)$/
 
-        const lines = html.match(patternLineInformation);
-        const bytes = html.match(patternBytes);
+        let lines = html.match(patternLineInformation);
+        let bytes = html.match(patternBytes);
         const extension = url.match(patternFileExtension);
+
+        if ( !bytes ) {
+          bytes = html.match(patternFileWithoutLines);
+          lines = [0,0];
+        }
 
         if ( lines && bytes && extension ) {
           resolve({ lines: lines[1], bytes: bytes[1], extension: extension[1], name: url });
