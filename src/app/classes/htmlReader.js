@@ -4,8 +4,8 @@ const fs = require('fs');
 class HtmlReader {
 
   githubUrl = 'https://www.github.com/';
+  jsonPath = 'github.html';
   files = [];
-  githubUsername;
 
   /**
   * This method will read all folders and files from the github repository
@@ -16,8 +16,8 @@ class HtmlReader {
     if ( !urlArray.length ) { return this.files; }
 
     const url = urlArray.pop();
-    let filePath = await this.requestAndSaveHtml( `${this.githubUrl + url }` );
-    const fileInfo = await this.getFileInformation(url, filePath);
+    await this.requestAndSaveHtml( `${this.githubUrl + url }` );
+    const fileInfo = await this.getFileInformation(url);
 
     if ( fileInfo ) {
       // -- For debug
@@ -26,10 +26,10 @@ class HtmlReader {
       // console.log('PROCESSED FILES COUNT', this.files.length);
 
       this.files.push(fileInfo);
-      fs.unlinkSync(filePath);
+      fs.unlinkSync(this.jsonPath);
       return await this.readRepository(urlArray);
     } else {
-      const matches = await this.findFoldersAndFiles(filePath);
+      const matches = await this.findFoldersAndFiles();
       if ( matches ) {
         const links = await this.extractLinks(matches);
         if ( links ) {
@@ -37,21 +37,19 @@ class HtmlReader {
         }
       }
       
-      fs.unlinkSync(filePath);
+      fs.unlinkSync(this.jsonPath);
       return await this.readRepository(urlArray);
     }
   }
 
   async requestAndSaveHtml ( url ) {
-    if( !url || !this.githubUsername ) { return; }
-
-    const filePath = `file${this.githubUsername + (this.files.length + 1)}.html`;
+    if( !url ) { return; }
 
     return new Promise((resolve, reject) => {
-      const createFile = fs.createWriteStream( filePath );
+      const createFile = fs.createWriteStream(this.jsonPath);
 
       createFile.on('close', () => {
-        resolve(filePath);
+        resolve(true);
       });
 
       createFile.on('error', () => {        
@@ -62,11 +60,11 @@ class HtmlReader {
     });
   }
 
-  async getFileInformation(url, filePath) {
+  async getFileInformation(url) {
     if(!url) { return; }
 
     return new Promise( (resolve, reject) => {
-      fs.readFile(filePath, 'utf8', function ( error, html ) {
+      fs.readFile(this.jsonPath, 'utf8', function ( error, html ) {
         if ( error || !html ) {
           reject('An unexpected error occurred while reading the github html page');
         }
@@ -94,10 +92,10 @@ class HtmlReader {
     });
   }
 
-  async findFoldersAndFiles(filePath) {
+  async findFoldersAndFiles() {
     
     return new Promise( (resolve, reject) => {
-      fs.readFile(filePath, 'utf8', function ( error, html ) {
+      fs.readFile(this.jsonPath, 'utf8', function ( error, html ) {
         if ( error ) {
           reject('An unexpected error occurred while reading the github html page');
         }

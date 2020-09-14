@@ -26,5 +26,5 @@ module.exports = ValidateGithubURL = function( url ) {
     return { stats: false, message: 'The github repository name is invalid! Try https://github.com/username/repository' };
   }
   
-  return { status: true, url: `${gitHubUser[1]}/${gitRepositoryName}`, gitHubUser: gitHubUser[1] };
+  return { status: true, url: `${gitHubUser[1]}/${gitRepositoryName}`};
 }

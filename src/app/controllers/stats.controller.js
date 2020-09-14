@@ -32,7 +32,6 @@ class StatsController {
         return res.json({ stats: fileStats });
       }
 
-      htmlReader.githubUsername = validation.gitHubUser;
       let filesStats = await htmlReader.readRepository([validation.url]);
       filesStats = filesStats.sort( (a,b) => {
         return a.extension === b.extension ? 0 : +(a.extension > b.extension) || -1;
