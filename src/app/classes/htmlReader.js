@@ -20,6 +20,11 @@ class HtmlReader {
     const fileInfo = await this.getFileInformation(url);
 
     if ( fileInfo ) {
+      // -- For debug
+      // console.log('URL ARRAY', urlArray);
+      // console.log('FILE INFO', fileInfo);
+      // console.log('PROCESSED FILES COUNT', this.files.length);
+
       this.files.push(fileInfo);
       fs.unlinkSync(this.jsonPath);
       return await this.readRepository(urlArray);
@@ -60,7 +65,7 @@ class HtmlReader {
 
     return new Promise( (resolve, reject) => {
       fs.readFile(this.jsonPath, 'utf8', function ( error, html ) {
-        if ( error ) {
+        if ( error || !html ) {
           reject('An unexpected error occurred while reading the github html page');
         }
 
