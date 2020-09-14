@@ -9,7 +9,10 @@ class HtmlReader {
 
   async readRepository ( filesArray ) {
 
-    if ( !filesArray.length ) { return this.files; }
+    if ( !filesArray.length ) { 
+      console.log('TAMANHO FINAL', this.files.length);
+      return this.files;
+    }
 
     const url = filesArray.pop();
     await this.requestAndSaveHtml( `${this.githubUrl + url }` );
@@ -19,9 +22,9 @@ class HtmlReader {
       console.log('FILE INFO', fileInfo);
       console.log('FILE ARRAY', filesArray);
       this.files.push(fileInfo);
-
+      console.log(this.files.length);
       fs.unlinkSync(this.jsonPath);
-      this.readRepository(filesArray);
+      return await this.readRepository(filesArray);
 
     } else {
       const matches = await this.findFoldersAndFiles();
@@ -33,7 +36,7 @@ class HtmlReader {
       }
       
       fs.unlinkSync(this.jsonPath);
-      this.readRepository(filesArray);
+      return await this.readRepository(filesArray);
     }
   }
 

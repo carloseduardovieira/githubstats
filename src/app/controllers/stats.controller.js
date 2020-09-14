@@ -18,7 +18,7 @@ class StatsController {
     try {
       const filesArray = [validation.url];
       const matches = await htmlReader.readRepository(filesArray);
-
+      console.log(matches);
       return res.json({ repository: matches });
     } catch ( error ) {
       console.error(error);
