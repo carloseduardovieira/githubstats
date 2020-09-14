@@ -4,7 +4,7 @@ const fs = require('fs');
 class HtmlReader {
 
   githubUrl = 'https://www.github.com/';
-  jsonPath = 'temp/github.html';
+  jsonPath = 'github.html';
   files = [];
 
   /**
