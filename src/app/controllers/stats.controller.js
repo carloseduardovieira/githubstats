@@ -58,7 +58,7 @@ class StatsController {
       });
 
     } catch ( error ) {
-      return res.status(500).json({message: 'An unexpected error occurred while processing your request'});
+      return res.status(500).json({message: error});
     }
   }
 }
