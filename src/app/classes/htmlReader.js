@@ -1,11 +1,17 @@
 const request = require('request');
-const fs = require('fs');
 
 class HtmlReader {
 
   githubUrl = 'https://www.github.com/';
-  jsonPath = 'github.html';
   files = [];
+
+  //regex patterns
+  patternLineInformation = /(\w+) lines/;
+  patternBytes = /file-info-divider\"><\/span>?.\s*([a-zA-Z0-9].[a-zA-Z0-9]*[\s]*[a-zA-Z]*)/;
+  patternFileWithoutLines = /([\s][0-9]{1,}[\s]{1,}[A-Z]{1,})[\s]/;
+  patternFileExtension = /[^\\]*\.(\w+)$/;
+  patternRepositoryLines = /<a class=\"js-navigation-open link-gray-dark\"(.*?)<\/a>/g;
+  patternLinks = /href="\/(.*?)"/;
 
   /**
   * This method will read all folders and files from the github repository
@@ -16,20 +22,19 @@ class HtmlReader {
     if ( !urlArray.length ) { return this.files; }
 
     const url = urlArray.pop();
-    await this.requestAndSaveHtml( `${this.githubUrl + url }` );
-    const fileInfo = await this.getFileInformation(url);
-
+    const html = await this.requestHtml( `${this.githubUrl + url }` );
+    const fileInfo = await this.getFileInformation(url, html);
+    
     if ( fileInfo ) {
       // -- For debug
-      // console.log('URL ARRAY', urlArray);
-      // console.log('FILE INFO', fileInfo);
-      // console.log('PROCESSED FILES COUNT', this.files.length);
+      console.log('URL ARRAY', urlArray);
+      console.log('FILE INFO', fileInfo);
+      console.log('PROCESSED FILES COUNT', this.files.length);
 
       this.files.push(fileInfo);
-      fs.unlinkSync(this.jsonPath);
       return await this.readRepository(urlArray);
     } else {
-      const matches = await this.findFoldersAndFiles();
+      const matches = await this.findFoldersAndFiles(html);
       if ( matches ) {
         const links = await this.extractLinks(matches);
         if ( links ) {
@@ -37,90 +42,70 @@ class HtmlReader {
         }
       }
       
-      fs.unlinkSync(this.jsonPath);
       return await this.readRepository(urlArray);
     }
   }
 
-  async requestAndSaveHtml ( url ) {
+  async requestHtml ( url ) {
     if( !url ) { return; }
 
     return new Promise((resolve, reject) => {
-      const createFile = fs.createWriteStream(this.jsonPath);
-
-      createFile.on('close', () => {
-        resolve(true);
-      });
-
-      createFile.on('error', () => {        
-        reject('An unexpected error occurred while fetching the github html page');
-      });
-
-      request(url).pipe( createFile );
-    });
-  }
-
-  async getFileInformation(url) {
-    if(!url) { return; }
-
-    return new Promise( (resolve, reject) => {
-      fs.readFile(this.jsonPath, 'utf8', function ( error, html ) {
-        if ( error || !html ) {
-          reject('An unexpected error occurred while reading the github html page');
-        }
-
-        const patternLineInformation = /(\w+) lines/;
-        const patternBytes = /file-info-divider\"><\/span>?.\s*([a-zA-Z0-9].[a-zA-Z0-9]*[\s]*[a-zA-Z]*)/;
-        const patternFileWithoutLines = /([\s][0-9]{1,}[\s]{1,}[A-Z]{1,})[\s]/;
-        const patternFileExtension = /[^\\]*\.(\w+)$/
-
-        let lines = html.match(patternLineInformation);
-        let bytes = html.match(patternBytes);
-        const extension = url.match(patternFileExtension);
-
-        if ( !bytes ) {
-          bytes = html.match(patternFileWithoutLines);
-          lines = [0,0];
-        }
-
-        if ( lines && bytes && extension ) {
-          resolve({ lines: lines[1], bytes: bytes[1], extension: extension[1], name: url });
-        } else {
-          resolve(false);
-        }
-      });
-    });
-  }
-
-  async findFoldersAndFiles() {
-    
-    return new Promise( (resolve, reject) => {
-      fs.readFile(this.jsonPath, 'utf8', function ( error, html ) {
+      return request(url, (error, response, body) => {
         if ( error ) {
-          reject('An unexpected error occurred while reading the github html page');
+          reject(error);
         }
 
-        const pattern = /<a class=\"js-navigation-open link-gray-dark\"(.*?)<\/a>/g;
-        const matches = html.match(pattern);
-
-        if ( matches ) {
-          resolve(matches);
-          return;
-        } 
-
-        resolve(false);
+        resolve(body);
       });
+    });
+  }
+
+  async getFileInformation(url, html) {
+
+    if( !url || !html ) { return; }
+
+    return new Promise( ( resolve ) => {
+
+      let lines = html.match(this.patternLineInformation);
+      let bytes = html.match(this.patternBytes);
+      const extension = url.match(this.patternFileExtension);
+
+      if ( !bytes ) {
+        bytes = html.match(this.patternFileWithoutLines);
+        lines = [0,0];
+      }
+
+      if ( lines && bytes && extension ) {
+        resolve({ lines: lines[1], bytes: bytes[1], extension: extension[1], name: url });
+      } else {
+        resolve(false);
+      }
+
+    });
+  }
+
+  async findFoldersAndFiles(html) {
+    if( !html ) { return; }
+
+    return new Promise( (resolve) => {
+      
+      const matches = html.match(this.patternRepositoryLines);
+
+      if ( matches ) {
+        resolve(matches);
+        return;
+      } 
+
+      resolve(false);
     });
   }
 
   async extractLinks( matches ) {
     if ( !matches ) { return; }
-
-    const pattern = /href="\/(.*?)"/;
-
+    
     return new Promise( (resolve ) => {
-      matches = matches.map( (html) => {
-        const match = html.match( pattern );
+      matches = matches.map( ( lines ) => {
+        const match = lines.match( this.patternLinks );
         if ( match ) {
           return match[1];
         }
